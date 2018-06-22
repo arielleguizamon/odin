@@ -12,7 +12,9 @@ exports.up = function(knex, Promise) {
             t.text('category_requests');
             t.text('datasetrequest_categories')
         })
-    ])
+    ]).catch(function(error) {
+        console.log(error);
+    });
 };
 
 exports.down = function(knex, Promise) {

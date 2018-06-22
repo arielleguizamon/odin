@@ -29,7 +29,7 @@ Sails.load(require('rc')('sailscron'), (err, sails) => {
         // new CronJob('0 */1 * * * *', function() {
         // crons = () => {
         // get all unfinished jobs, order by the date they were created
-        FileJob.find({finish: false}).sort('priority').sort('createdAt').then((jobs) => {
+        FileJob.find({finish: false}).sort('createdAt').then((jobs) => {
             console.log('Jobs queued: ', jobs)
             _.forEach(jobs, function(job) {
                 sem.take(function() {

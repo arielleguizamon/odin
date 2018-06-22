@@ -1,30 +1,30 @@
 const MongoClient = require('mongodb').MongoClient;
 const _ = require('lodash');
-var bulkConnectionDb;
+let bulkConnectionDb;
 
 module.exports = {
 
-    mongoConnect: function(dataset, filename, cb) {
+    mongoConnect (dataset, filename, cb) {
         // Connect to the db
-        MongoClient.connect("mongodb://" + sails.config.odin.dataStorage.host + ":" + sails.config.odin.dataStorage.port + "/" + dataset, function(err, db) {
+        MongoClient.connect("mongodb://" + sails.config.odin.dataStorage.host + ":" + sails.config.odin.dataStorage.port + "/" + dataset, (err, db)=> {
             if (err)
                 return cb(err);
             cb(null, db);
         });
     },
-    mongoSave: function(dataset, filename, json, cb) {
-        json = _.transform(json, function(result, each) {
-            result.push(_.mapKeys(each, function(value, key) {
+    mongoSave (dataset, filename, json, cb) {
+        json = _.transform(json, (result, each) => {
+            result.push(_.mapKeys(each, (value, key) => {
                 return _.replace(key, ".", " ");
             }));
         }, [])
-        DataStorageService.mongoConnect(dataset, filename, function(err, db) {
+        DataStorageService.mongoConnect(dataset, filename, (err, db) => {
             if (err)
                 return cb(err)
             var collection = db.collection(filename);
             collection.insert(json, {
                 w: 1
-            }, function(err) {
+            }, (err) => {
                 if (err)
                     return cb(err);
                 db.close();
@@ -32,13 +32,13 @@ module.exports = {
             });
         });
     },
-    mongoCount: function(dataset, filename, cb) {
+    mongoCount (dataset, filename, cb) {
         if (!_.isNull(filename)) {
-            DataStorageService.mongoConnect(dataset, filename, function(err, db) {
+            DataStorageService.mongoConnect(dataset, filename, (err, db) => {
                 if (err)
                     return cb(err)
                 var collection = db.collection(filename);
-                collection.count({}, function(err, count) {
+                collection.count({}, (err, count) => {
                     if (err)
                         console.error(err);
                     db.close();
@@ -47,9 +47,9 @@ module.exports = {
             });
         }
     },
-    mongoRename: function(dataset, filename, newfilename, cb) {
+    mongoRename (dataset, filename, newfilename, cb) {
         if (!_.isNull(filename)) {
-            DataStorageService.mongoConnect(dataset, filename, function(err, db) {
+            DataStorageService.mongoConnect(dataset, filename, (err, db) => {
                 if (err)
                     return cb(err)
                 var collection = db.collection(filename);
@@ -58,8 +58,8 @@ module.exports = {
             });
         }
     },
-    mongoReplace: function(oldDataset, newDataset, oldFilename, newFilename, cb) {
-        return DataStorageService.mongoContents(oldDataset, oldFilename, 0, 0, function(err, json) {
+    mongoReplace (oldDataset, newDataset, oldFilename, newFilename, cb) {
+        return DataStorageService.mongoContents(oldDataset, oldFilename, 0, 0, function (err, json)  {
             if (err)
                 return cb(err)
 
@@ -76,13 +76,13 @@ module.exports = {
         }.bind(this))
 
     },
-    deleteCollection: function(dataset, filename, cb) {
+    deleteCollection (dataset, filename, cb) {
         if (!_.isNull(filename)) {
-            DataStorageService.mongoConnect(dataset, filename, function(err, db) {
+            DataStorageService.mongoConnect(dataset, filename, (err, db) => {
                 if (err)
                     return cb(err)
                 var collection = db.collection(filename);
-                collection.drop(function(err, reply) {
+                collection.drop( (err, reply) => {
                     if (err)
                         console.error(err);
                     db.close();
@@ -91,8 +91,8 @@ module.exports = {
         }
     },
     // TODO: should this be donde with streams?
-    mongoContents: function(dataset, filename, limit, skip, cb) {
-        DataStorageService.mongoConnect(dataset, filename, function(err, db) {
+    mongoContents (dataset, filename, limit, skip, cb) {
+        DataStorageService.mongoConnect(dataset, filename, (err, db)=> {
             if (err)
                 return cb(err)
             var data = [];
@@ -100,7 +100,7 @@ module.exports = {
             var collection = db.collection(filename);
             var cursor = collection.find().skip(skip).limit(limit);
 
-            cursor.each(function(err, doc) {
+            cursor.each((err, doc) => {
                 if (err)
                     console.error(err);
                 if (doc !== null) {

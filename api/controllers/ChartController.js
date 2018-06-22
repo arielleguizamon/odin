@@ -8,60 +8,60 @@ const actionUtil = require('sails/lib/hooks/blueprints/actionUtil');
 const _ = require('lodash');
 
 module.exports = {
-    unpublish: function(req, res) {
+    unpublish: (req, res) => {
         const pk = actionUtil.requirePk(req);
         return PublishService.publishModel(Chart, pk, 'unpublished', res)
     },
-    reject: function(req, res) {
+    reject: (req, res) => {
         const pk = actionUtil.requirePk(req);
         return PublishService.publishModel(Chart, pk, 'rejected', res)
     },
-    create: function(req, res) {
-        this.createChart(req, res, function(values) {
+    create: function (req, res){
+        this.createChart(req, res, (values) => {
             UploadService.metadataSave(Chart, values, 'chart', req, res);
         });
     },
-    update: function(req, res) {
-        this.createChart(req, res, function(values) {
+    update: function(req, res){
+        this.createChart(req, res, (values) => {
             UploadService.metadataUpdate(Chart, values, 'chart', req, res);
         });
     },
 
-    createChart: function(req, res, cb) {
+    createChart (req, res, cb) {
 
         const values = actionUtil.parseValues(req);
 
-        var link = _.get(values, 'link', null);
+        let link = _.get(values, 'link', null);
 
         if (link !== null) {
             cb(values);
         } else {
 
-            var fileId = _.get(values, 'file', '');
-            var type = _.get(values, 'type', '');
-            var dataType = _.get(values, 'dataType', '');
+            let fileId = _.get(values, 'file', '');
+            let type = _.get(values, 'type', '');
+            let dataType = _.get(values, 'dataType', '');
             values.dataSeries = _.split(_.get(values, 'dataSeries', ''), ',');
 
-            var fileId = values.file;
-            var type = values.type;
-            var dataType = values.dataType;
-            var dataSeries = values.dataSeries
+            fileId = values.file;
+            type = values.type;
+            dataType = values.dataType;
+            let dataSeries = values.dataSeries
 
-            var base = _.take(dataSeries);
-            var elements = dataSeries.length;
+            let base = _.take(dataSeries);
+            let elements = dataSeries.length;
             dataSeries = _.slice(dataSeries, 1, elements);
 
-            var element1 = values.dataSeries[0];
-            var element2 = values.dataSeries[1];
+            let element1 = values.dataSeries[0];
+            let element2 = values.dataSeries[1];
             // var serie = [element1];
-            File.findOne(fileId).exec(function(err, record) {
+            File.findOne(fileId).exec(function (err, record) {
 
                 if (err)
                     return res.negotiate(err);
-                DataStorageService.mongoContents(record.dataset, record.fileName, 0, 0, function(err, table) {
+                DataStorageService.mongoContents(record.dataset, record.fileName, 0, 0, function (err, table) {
                     if (err)
                         return res.negotiate(err)
-                    this.generateChartData(table, dataType, element1, element2, function(chartData) {
+                    this.generateChartData(table, dataType, element1, element2, function (chartData) {
                         values.data = {
                             labels: _.keys(chartData),
                             data: (dataType === 'quantitative')
@@ -75,27 +75,27 @@ module.exports = {
             }.bind(this));
         }
     },
-    generateChartData: function(data, dataType, element1, element2, cb) {
-        var chartData;
+    generateChartData: (data, dataType, element1, element2, cb) => {
+        let chartData;
         if (dataType === 'qualitative') {
 
             //if the chart is qualitative we group all the data referenced by the element asked
-            chartData = _.groupBy(data, function(value) {
+            chartData = _.groupBy(data, (value) => {
                 return value[element1];
             });
         } else {
             if (dataType === 'quantitative') {
                 //if the chart is quantitative return associative array
-                var groupedData = _.groupBy(data, function(value) {
+                let groupedData = _.groupBy(data, (value) => {
                     return value[element1];
                 });
                 console.log('groupedData \n')
                 console.log(groupedData);
                 console.log('end groupedData \n\n')
-                chartData = _.transform(groupedData, function(result, value) {
+                chartData = _.transform(groupedData, (result, value) => {
                     console.log('value = ' + value)
-                    var key = value[0][element1];
-                    var val = _.sumBy(value, function(each) {
+                    let key = value[0][element1];
+                    let val = _.sumBy(value, (each) => {
                         // in case a number is like 192123,522, transform it to 192123.522
                         return _.toNumber(_.replace(each[element2], ',', '.'));
                     });

@@ -27,7 +27,8 @@ const models = [
     'status',
     'statistic',
     'basemap',
-    'metric'
+    'metric',
+    'datajson'
 ];
 
 module.exports = {

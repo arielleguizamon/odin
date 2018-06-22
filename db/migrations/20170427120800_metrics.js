@@ -5,7 +5,9 @@ exports.up = function(knex, Promise) {
         table.integer('count');
         table.timestamp('createdAt');
         table.timestamp('updatedAt');
-    })
+    }).catch(function(error) {
+        console.log(error);
+    });
 };
 
 exports.down = function(knex, Promise) {};

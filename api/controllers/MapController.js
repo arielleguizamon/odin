@@ -8,7 +8,7 @@
 const actionUtil = require('sails/lib/hooks/blueprints/actionUtil');
 const _ = require('lodash');
 const path = require('path');
-var tj = require('@mapbox/togeojson'),
+let tj = require('@mapbox/togeojson'),
     fs = require('fs'),
     DOMParser = require('xmldom').DOMParser;
 
@@ -17,32 +17,32 @@ module.exports = {
     //     const pk = actionUtil.requirePk(req);
     //     return PublishService.publishModel(_Map, pk, 'publishedStatus', res)
     // },
-    unpublish: function(req, res) {
+    unpublish: (req, res) => {
         const pk = actionUtil.requirePk(req);
         return PublishService.publishModel(_Map, pk, 'unpublished', res)
     },
-    reject: function(req, res) {
+    reject: (req, res) => {
         const pk = actionUtil.requirePk(req);
         return PublishService.publishModel(_Map, pk, 'rejected', res)
     },
-    create: function(req, res) {
+    create: (req, res) => {
         const values = actionUtil.parseValues(req);
         // find the fileid within the parameters
-        var fileId = _.get(values, 'file', '');
-        var latitude = _.get(values, 'latitudeKey', '');
-        var longitude = _.get(values, 'longitudeKey', '');
+        let fileId = _.get(values, 'file', '');
+        let latitude = _.get(values, 'latitudeKey', '');
+        let longitude = _.get(values, 'longitudeKey', '');
 
-        var properties = _.get(values, 'properties', '');
+        let properties = _.get(values, 'properties', '');
 
-        var propertiesArray = _.split(properties, ',');
+        let propertiesArray = _.split(properties, ',');
 
-        var link = _.get(values, 'link', null);
+        let link = _.get(values, 'link', null);
 
         if (fileId === '')
             return res.notFound();
 
         // look for the file with given id
-        File.findOne(fileId).populate('type').populate('dataset').exec(function(err, record) {
+        File.findOne(fileId).populate('type').populate('dataset').exec(function (err, record) {
             if (err)
                 return res.negotiate(err);
 
@@ -54,10 +54,10 @@ module.exports = {
                 } else {
                     // fetch the collection data of the file
                     // TODO: check if this can be accomplished with streams
-                    DataStorageService.mongoContents(record.dataset.id, record.fileName, 0, 0, function(err, data) {
+                    DataStorageService.mongoContents(record.dataset.id, record.fileName, 0, 0, function (err, data) {
                         if (err)
                             return res.negotiate(err)
-                        this.generateGeoJson(data, latitude, longitude, propertiesArray, function(geoJson, incorrect, correct) {
+                        this.generateGeoJson(data, latitude, longitude, propertiesArray, function (geoJson, incorrect, correct) {
                             values.geojson = geoJson;
                             // Once the geoJson is created, we create the map
                             UploadService.metadataSave(_Map, values, 'maps', req, res, {
@@ -66,11 +66,11 @@ module.exports = {
                             });
 
                         }.bind(this));
-                    }.bind(this)) // else, is a kml;
+                    }.bind(this)); // else, is a kml;
                 }
             } else {
                 // TODO: fix crash on big files
-                this.kmlToGeoJson(record, function(geoJson) {
+                this.kmlToGeoJson(record, (geoJson) => {
                     values.geojson = geoJson;
                     UploadService.metadataSave(_Map, values, 'maps', req, res, {
                         incorrect: 0,
@@ -83,25 +83,25 @@ module.exports = {
 
     },
 
-    update: function(req, res) {
+    update: (req, res) => {
         const values = actionUtil.parseValues(req);
         // find the fileid within the parameters
-        var fileId = _.get(values, 'file', '');
-        var latitude = _.get(values, 'latitudeKey', '');
-        var longitude = _.get(values, 'longitudeKey', '');
-        var kml = _.get(values, 'kml', false);
+        let fileId = _.get(values, 'file', '');
+        let latitude = _.get(values, 'latitudeKey', '');
+        let longitude = _.get(values, 'longitudeKey', '');
+        let kml = _.get(values, 'kml', false);
 
-        var properties = _.get(values, 'properties', '');
+        let properties = _.get(values, 'properties', '');
 
-        var propertiesArray = _.split(properties, ',');
+        let propertiesArray = _.split(properties, ',');
 
-        var link = _.get(values, 'link', null);
+        let link = _.get(values, 'link', null);
 
         if (fileId === '')
             return res.notFound();
 
         // look for the file with given id
-        File.findOne(fileId).exec(function(err, record) {
+        File.findOne(fileId).exec(function (err, record) {
             if (err)
                 return res.negotiate(err);
 
@@ -109,11 +109,11 @@ module.exports = {
                 UploadService.metadataUpdate(_Map, values, 'maps', req, res);
             } else {
                 // fetch the collection data of the file
-                DataStorageService.mongoContents(record.dataset, record.fileName, 0, 0, function(err, data) {
+                DataStorageService.mongoContents(record.dataset, record.fileName, 0, 0, function (err, data) {
                     if (err)
                         return res.negotiate(err)
 
-                    this.generateGeoJson(data, latitude, longitude, propertiesArray, function(geoJson, incorrect, correct) {
+                    this.generateGeoJson(data, latitude, longitude, propertiesArray, (geoJson, incorrect, correct) => {
                         values.geojson = geoJson;
                         // Once the geoJson is created, we create the map
                         UploadService.metadataUpdate(_Map, values, 'maps', req, res, {
@@ -127,17 +127,17 @@ module.exports = {
     },
 
     generateGeoJson(data, latitude, longitude, propertiesArray, cb) {
-        var incorrect = 0;
-        var correct = 0;
-        var geoJson = {
+        let incorrect = 0;
+        let correct = 0;
+        let geoJson = {
             type: "FeatureCollection",
             features: []
         };
 
-        _.forEach(data, function(value, index) {
-            var propertiesMap = {};
+        _.forEach(data, function (value, index) {
+            let propertiesMap = {};
             // for each property sent we add it to the map
-            _.forEach(propertiesArray, function(property) {
+            _.forEach(propertiesArray, (property) => {
                 propertiesMap[property] = value[property];
             });
             // if commas are present, replace them with dots
@@ -147,7 +147,7 @@ module.exports = {
                 incorrect++;
             } else {
                 correct++;
-                var point = {
+                let point = {
                     geometry: {
                         type: "Point",
                         coordinates: [value[longitude], value[latitude]]
@@ -162,7 +162,7 @@ module.exports = {
         cb(geoJson, incorrect, correct);
     },
 
-    mapCreate: function(values, req, res) {
+    mapCreate: (values, req, res) => {
         _Map.create(values).exec(function created(err, newInstance) {
             if (err)
                 return res.negotiate(err);
@@ -173,8 +173,8 @@ module.exports = {
                     Model.introduce(newInstance);
                 }
                 // Make sure data is JSON-serializable before publishing
-                var publishData = _.isArray(newInstance)
-                    ? _.map(newInstance, function(instance) {
+                let publishData = _.isArray(newInstance)
+                    ? _.map(newInstance, (instance) => {
                         return instance.toJSON();
                     })
                     : newInstance.toJSON();
@@ -196,13 +196,13 @@ module.exports = {
     },
 
     kmlToGeoJson(record, cb) {
-        var filePath = path.resolve(sails.config.odin.uploadFolder + '/' + record.dataset.slug + '/' + record.fileName);
+        let filePath = path.resolve(sails.config.odin.uploadFolder + '/' + record.dataset.slug + '/' + record.fileName);
 
-        var kml = new DOMParser().parseFromString(fs.readFileSync(filePath, 'utf8'));
+        let kml = new DOMParser().parseFromString(fs.readFileSync(filePath, 'utf8'));
 
-        var converted = tj.kml(kml);
+        let converted = tj.kml(kml);
 
-        var convertedWithStyles = tj.kml(kml, {styles: true});
+        let convertedWithStyles = tj.kml(kml, {styles: true});
         cb(convertedWithStyles)
     },
 

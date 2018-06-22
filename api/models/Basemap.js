@@ -32,6 +32,7 @@ module.exports = {
         },
         url: {
             type: 'string',
+            required: true,
             size: 500
         },
         attribution: {

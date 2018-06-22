@@ -8,6 +8,7 @@
 const shortId = require('shortid');
 const slug = require('slug');
 const _ = require('lodash');
+const CURRENT_FILE = __filename.slice(__dirname.length + 1, -3);
 
 module.exports = {
     schema: true,
@@ -35,6 +36,7 @@ module.exports = {
         },
         description: {
             type: 'string',
+            required: true,
             size: 350
         },
         color: {
@@ -112,5 +114,20 @@ module.exports = {
         }
 
         next();
+    },
+    afterUpdate: (values, next) => {
+      values.operationExplicit = "afterUpdate";
+      UpdateDataJsonService.updateJson(values, CURRENT_FILE);
+      next()
+    },
+    afterCreate: (values, next) => {
+      values.operationExplicit = "afterCreate";
+      UpdateDataJsonService.updateJson(values, CURRENT_FILE);
+      next();
+    },
+    afterDestroy: (values, next) => {
+      values.operationExplicit = "afterDestroy";
+      UpdateDataJsonService.updateJson(values, CURRENT_FILE);
+      next();
     }
 };

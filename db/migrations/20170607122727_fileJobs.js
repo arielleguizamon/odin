@@ -7,7 +7,9 @@ exports.up = function(knex, Promise) {
         table.timestamp('endDate').defaultTo(null);
         table.timestamp('createdAt');
         table.timestamp('updatedAt');
-    })
+    }).catch(function(error) {
+        console.log(error);
+    });
 };
 
 exports.down = function(knex, Promise) {};
