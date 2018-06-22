@@ -11,8 +11,9 @@ const path = require('path');
 const mkdirp = require('mkdirp');
 const exec = require('child_process').exec;
 const moment = require('moment');
-const CronJob = require('cron').CronJob;
+// const CronJob = require('cron').CronJob;
 const CategorySeed = require('../seeds/CategorySeed');
+const dataJsonS = require('../api/services/DataJsonService.js');
 
 module.exports = {
     bootstrap: cb => {
@@ -74,6 +75,20 @@ module.exports = {
         sails.on('lifted', function() {
             LogService.winstonLog('info', 'Sails has lifted!');
 
+        // data.json dataJsonConstructor
+          try {
+            let path = 'files/dataJson';
+            if (!(fs.existsSync(path))) {
+              mkdirp(path, (err) => {
+                  if (err) console.error(err);
+                  else console.log('dataJson folder created on: ' + path)
+              });
+                dataJsonS.dataJsonConstructor();
+              }
+          } catch (e) {
+            console.log(e);
+              throw e;
+          }
             /* crons
             // cron databases and files backup
             var currentDate = moment().format("MM.DD.YYYY");

@@ -29,6 +29,12 @@ module.exports = {
       status: 401
     },
 
+    USER_INACTIVE: {
+      code: 'E_USER_INACTIVE',
+      message: 'User inactive, please contact your administrator',
+      status: 404
+    },
+
     FORBIDDEN: {
       code: 'E_FORBIDDEN',
       message: 'The user is not authorized to access the requested resource.',

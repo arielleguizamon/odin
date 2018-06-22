@@ -5,10 +5,11 @@
  * @description :: Model for storing Dataset records
  */
 
-var shortId = require('shortid');
-var slug = require('slug');
-var fs = require('fs');
-var mkdirp = require('mkdirp');
+const shortId = require('shortid');
+const slug = require('slug');
+const fs = require('fs');
+const mkdirp = require('mkdirp');
+const CURRENT_FILE = __filename.slice(__dirname.length + 1, -3);
 
 module.exports = {
     schema: true,
@@ -35,7 +36,8 @@ module.exports = {
         },
         description: {
             type: 'string',
-            size: 350
+            size: 350,
+            required: true
         },
         notes: {
             type: 'string',
@@ -131,6 +133,11 @@ module.exports = {
                 lower: true
             });
         }
+        values.operationExplicit = "afterUpdate";
+        if (values.wasCreated) {
+          values.wasCreated = true;
+        }
+        UpdateDataJsonService.updateJson(values, CURRENT_FILE);
         next()
     },
     beforeCreate: (values, next) => {
@@ -143,6 +150,9 @@ module.exports = {
             key: 'defaultStatus'
         }).exec(function (err, record) {
             values.status = record.value;
+            values.operationExplicit = "afterCreate";
+            values.wasCreated = false;
+            UpdateDataJsonService.updateJson(values, CURRENT_FILE);
             next();
         });
     },
@@ -194,5 +204,10 @@ module.exports = {
     afterUpdate: (values, next) => {
         Dataset.saveDatasetAssociatedFile(values);
         next()
+    },
+    afterDestroy: (values, next) => {
+      values.operationExplicit = "afterDestroy";
+      UpdateDataJsonService.updateJson(values, CURRENT_FILE);
+      next();
     }
 };

@@ -49,13 +49,14 @@ const _onLocalStrategyAuth = (req, username, password, next) => {
     User
         .findOne({
             [LOCAL_STRATEGY_CONFIG.usernameField]: username,
-            deletedAt: null
+            // deletedAt: null
         })
         .then(user => {
+            if (!(user.deletedAt == null)) return next(null, null, sails.config.errors.USER_INACTIVE);
             if (!user) return next(null, null, sails.config.errors.USER_NOT_FOUND);
             if (!HashService.bcrypt.compareSync(password, user.password))
                 return next(null, null, sails.config.errors.USER_NOT_FOUND);
-            return next(null, user, {});
+            if(user.deletedAt == null) return next(null, user, {});
         })
         .catch(next);
 };

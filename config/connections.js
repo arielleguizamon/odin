@@ -53,8 +53,8 @@ module.exports = {
       adapter: 'sails-postgresql',
       database: 'odin',
       host: 'localhost',
-      user: 'postgres',
-      password: 'postgres',
+      user: 'odin',
+      password: 'x',
       port: 5432,
       pool: false,
       ssl: false

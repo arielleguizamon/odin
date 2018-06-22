@@ -16,7 +16,11 @@
     },
     {
       "name": "crons",
-      "script": "./crons.js"
+      "script": "./crons.js",
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "max_memory_restart": "10G"
     }
   ]
 }

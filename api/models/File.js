@@ -8,6 +8,7 @@
 const shortId = require('shortid');
 const fs = require('fs');
 const _ = require('lodash');
+const CURRENT_FILE = __filename.slice(__dirname.length + 1, -3);
 
 module.exports = {
     schema: true,
@@ -33,6 +34,7 @@ module.exports = {
         },
         description: {
             type: 'string',
+            required: true,
             size: 350
         },
         notes: {
@@ -91,11 +93,9 @@ module.exports = {
         },
         type: {
             model: 'filetype'
-            // required: true
         },
         updateFrequency: {
-            model: 'updatefrequency',
-            required: true
+            model: 'updatefrequency'
         },
         status: {
             model: 'status'
@@ -109,7 +109,6 @@ module.exports = {
         },
         dataset: {
             model: 'dataset'
-            // required: true
         },
         restService: {
             model: 'restservice'
@@ -128,7 +127,6 @@ module.exports = {
         },
         createdBy: {
             model: 'user'
-            // required: true
         },
 
         toJSON() {
@@ -137,7 +135,7 @@ module.exports = {
     },
 
     searchables: [
-        'name', 'description'
+        'name', 'description', 'fileName'
     ],
 
     beforeUpdate: (values, next) => {
@@ -151,7 +149,6 @@ module.exports = {
             values.url = _.replace(values.url, 'id', values.fileName);
             values.url = values.url + '/download';
         }
-
         if (!values.status) {
             Config.findOne({key: 'defaultStatus'}).then(record => {
                 values.status = record.value;
@@ -162,18 +159,27 @@ module.exports = {
         }
     },
     afterUpdate: (values, next) => {
+        values.operationExplicit = "afterUpdate";
+        UpdateDataJsonService.updateJson(values, CURRENT_FILE);
         if (values.dataset)
             ZipService.createZip(values.dataset);
         next();
     },
     afterCreate: (values, next) => {
-        FileJob.destroy({file: values.id, finish: false}).then((filejobs) => console.log('file jobs deleted', filejobs))
-        // if the file is not urgent, add it to the file job queue, to be parsed on the cron
-        if (values.urgent === false) {
-            FileJob.create({file: values.id}).then((fileJob) => console.log(fileJob)).catch((err) => console.log(err))
-        }
+        FileType.findOne(values.type).then((type) => {
+            if (type.api) {
+                FileJob.destroy({file: values.id, finish: false}).then((filejobs) => console.log('file jobs deleted', filejobs))
+                // if the file is not urgent, add it to the file job queue, to be parsed on the cron
+                if (values.urgent === false) {
+                    FileJob.create({file: values.id}).then((fileJob) => console.log(fileJob)).catch((err) => console.log(err))
+                }
+            }
+        })
+        values.operationExplicit = "afterCreate";
+        UpdateDataJsonService.updateJson(values, CURRENT_FILE);
         if (values.dataset)
             ZipService.createZip(values.dataset);
+
         next();
     },
     afterDestroy: (destroyedRecords, next) => {
@@ -182,6 +188,8 @@ module.exports = {
             UnpublishService.unpublish(destroyedRecords);
             UploadService.deleteFile(destroyedRecords.dataset, destroyedRecords.fileName, next);
         }
+        destroyedRecords.operationExplicit = "afterDestroy";
+        UpdateDataJsonService.updateJson(destroyedRecords, CURRENT_FILE);
         next();
     }
 };

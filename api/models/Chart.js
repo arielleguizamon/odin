@@ -29,6 +29,7 @@ module.exports = {
         },
         description: {
             type: 'string',
+            required: true,
             size: 350
         },
         notes: {

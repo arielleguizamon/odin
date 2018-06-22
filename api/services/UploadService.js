@@ -16,18 +16,18 @@ const slug = require('slug');
 const jsonfile = require('jsonfile');
 const _ = require('lodash');
 const bulkMongo = require('bulk-mongo');
-var Promise = require('bluebird');
+let Promise = require('bluebird');
 
 module.exports = {
     createFile: (req, fileRequired, cb) => {
         // Set timeout to 15 minutes to let files convert to json and be uploaded
         req.setTimeout(15 * 60 * 1000);
 
-        var uploadedFile = req.file('uploadFile').on('error', (err) => {
-            console.log(err);
+        let uploadedFile = req.file('uploadFile').on('error', (err) => {
+            console.log("uploadedFile");
         });
         if (uploadedFile.isNoop && fileRequired) {
-            var err = {
+            let err = {
                 message: 'No file was uploaded'
             }
             return cb(err);
@@ -37,7 +37,7 @@ module.exports = {
         }
     },
 
-    uploadFile: function(req, uploadedFile, fileRequired, cb) {
+    uploadFile: (req, uploadedFile, fileRequired, cb) => {
         let data = actionUtil.parseValues(req);
         // Clean null on dates, else the ORM will crash
         data = UploadService.cleanDates(data)
@@ -45,10 +45,10 @@ module.exports = {
         // if we are updating a file find the original
         if (!fileRequired) {
             let fileId = actionUtil.requirePk(req)
-            File.findOne(fileId).populate('dataset').populate('type').then(function(file) {
+            File.findOne(fileId).populate('dataset').populate('type').then((file) => {
                 // if the dataset has changed, find the new one
                 if (file.dataset !== data.dataset) {
-                    Dataset.findOne(data.dataset).then(function(dataset) {
+                    Dataset.findOne(data.dataset).then((dataset) => {
                         UploadService.updateFile(uploadedFile, data, file, dataset, fileRequired, req, cb)
                     });
                 } else {
@@ -57,8 +57,8 @@ module.exports = {
             });
         } else {
             // if is a new file, find the associated dataset and proceed with the upload
-            Dataset.findOne(data.dataset).then(function(dataset) {
-                UploadService.uploadAndParseFile(uploadedFile, data, dataset, fileRequired, req, cb)
+            Dataset.findOne(data.dataset).then((dataset) => {
+                UploadService.uploadAndParseFile(uploadedFile, data, dataset, fileRequired, null, req, cb)
             });
         }
 
@@ -72,7 +72,7 @@ module.exports = {
             }
             // If the file metadata was updated but no new file was added
             // update the fileName in case the name changed
-            var oldExtension = data.fileName.split('.').pop();
+            let oldExtension = data.fileName.split('.').pop();
             data.fileName = slug(data.name, {lower: true});
             data.fileName += '.' + oldExtension;
 
@@ -90,25 +90,25 @@ module.exports = {
         // if the uploaded name is the same of the one saved on the filesystem
         // don't deleted, just overwrite it
         if (file.fileName !== data.fileName) {
-            var upath = UploadService.getFilePath(file.dataset, file);
-            fs.lstat(upath, function(err, stats) {
+            let upath = UploadService.getFilePath(file.dataset, file);
+            fs.lstat(upath, (err, stats) => {
                 if (!err && stats.isFile()) {
                     UploadService.deleteFile(file.dataset, file.fileName, cb);
                 }
             });
         }
-        UploadService.uploadAndParseFile(uploadedFile, data, newDataset, fileRequired, req, cb)
+        UploadService.uploadAndParseFile(uploadedFile, data, newDataset, fileRequired, file.fileName, req, cb)
     },
 
-    uploadAndParseFile: (uploadedFile, data, newDataset, fileRequired, req, cb) => {
-        var mimetype;
-        var extension;
+    uploadAndParseFile: (uploadedFile, data, newDataset, fileRequired, oldName, req, cb) => {
+        let mimetype;
+        let extension;
         FileType.find({
             select: ['mimetype', 'api', 'id']
         }).then(filetypes => {
             // Create an object for each allowed filetype
-            let allowedTypes = _.transform(filetypes, function(allowedTypes, filetype) {
-                _.forEach(filetype.mimetype, function(mime) {
+            let allowedTypes = _.transform(filetypes, (allowedTypes, filetype) => {
+                _.forEach(filetype.mimetype, (mime) => {
                     allowedTypes[mime] = {
                         api: filetype.api,
                         id: filetype.id
@@ -118,7 +118,7 @@ module.exports = {
 
             // Physically upload the file
             uploadedFile.upload({
-                saveAs: function(uploadedFile, saveCb) {
+                saveAs: (uploadedFile, saveCb) => {
                     data.fileName = slug(data.name, {lower: true});
                     //Get the mime and the extension of the file
                     extension = uploadedFile.filename.split('.').pop();
@@ -144,7 +144,7 @@ module.exports = {
                     return cb(err);
                 }
                 if (files.length === 0) {
-                    var err = {
+                    let err = {
                         status: 400,
                         code: 400,
                         meessage: 'No file was uploaded'
@@ -153,7 +153,7 @@ module.exports = {
                 }
 
                 // Get the file mimetype and if it's available to parse to non-relational db
-                var currentMimetype = allowedTypes[mimetype]
+                let currentMimetype = allowedTypes[mimetype]
                 data.type = currentMimetype.id
 
                 // If the file is consumable via the API
@@ -171,9 +171,11 @@ module.exports = {
                         }
 
                     } else {
-                        DataStorageService.deleteCollection(data.dataset, data.fileName, (err) => cb(err));
-                        var filePath = UploadService.getFilePath(newDataset, data);
-                        var readStream = fs.createReadStream(filePath);
+                        if (!fileRequired) {
+                            DataStorageService.deleteCollection(data.dataset, oldName, (err) => cb(err));
+                        }
+                        let filePath = UploadService.getFilePath(newDataset, data);
+                        let readStream = fs.createReadStream(filePath);
 
                         // TODO: add json support
                         if (extension === 'xls' || extension === 'xlsx') {
@@ -190,7 +192,7 @@ module.exports = {
         }).catch(err => cb(err));
     },
 
-    xlsToJson: function(data, readStream, files, cb) {
+    xlsToJson: (data, readStream, files, cb) => {
         readStream.pipe(iconv.decodeStream(sails.config.odin.defaultEncoding)).collect((err, result) => {
             if (err)
                 return cb(err);
@@ -199,16 +201,35 @@ module.exports = {
 
             //Convert XLS to json, store on nosql database
             try {
-                var workbook = XLSX.readFile(files);
+                let workbook = XLSX.readFile(files);
                 //Join all the worksheets on one json
-                var json = _.reduce(workbook.SheetNames, function(result, sheetName) {
-                    var worksheet = workbook.Sheets[sheetName];
-
-                    var currentJson = XLSX.utils.sheet_to_json(worksheet);
+                let json = _.reduce(workbook.SheetNames, function(result, sheetName) {
+                    let worksheet = workbook.Sheets[sheetName];   
+                    let currentJson = XLSX.utils.sheet_to_json(worksheet, {header:1});
                     result = _.concat(result, currentJson);
                     return result;
-                }, []);
-                DataStorageService.mongoSave(data.dataset, data.fileName, json, (err, done) => {
+                }, []);         
+                 console.log('json',json);
+                // Solucion a los headers
+
+                let headers = _.slice(json,0,1)[0]
+                
+                let dataLineas = _.slice(json, 1, json.length)
+                console.log(headers);
+                console.log(dataLineas);
+                let headersFinal = _.transform(dataLineas, (function(acc, each){
+                    let lineaJson = {}
+                    for (let i = 0; i < headers.length; i++){
+                        let clave = headers[i]
+                        lineaJson[clave] = each[i]
+                        console.log('lineasJson',lineaJson)
+                     }
+                     acc.push(lineaJson)
+                }),[])
+                console.log('headersFinal', headersFinal);
+
+
+                DataStorageService.mongoSave(data.dataset, data.fileName, headersFinal, (err, done) => {
                     if (err)
                         cb(err)
                     cb(null, data)
@@ -219,26 +240,27 @@ module.exports = {
             readStream.destroy();
             // return cb(null, data);
         });
+
     },
 
-    csvToJson: function(dataset, data, readStream, cb) {
-        var params = {
+    csvToJson: (dataset, data, readStream, cb) => {
+        let params = {
             constructResult: false,
             delimiter: 'auto',
             workerNum: 1
         };
 
-        var converter = new Converter(params, {
+        let converter = new Converter(params, {
             objectMode: true,
             highWaterMark: 65535
         });
 
-        DataStorageService.mongoConnect(dataset, data.fileName, function(err, db) {
+        DataStorageService.mongoConnect(dataset, data.fileName, (err, db) => {
             console.log('Uploading: ', data.fileName)
             if (err)
                 return cb(err)
-            var factory_function = bulkMongo(db);
-            var bulkWriter = factory_function(data.fileName);
+            let factory_function = bulkMongo(db);
+            let bulkWriter = factory_function(data.fileName);
 
             readStream.pipe(converter).pipe(bulkWriter);
 
@@ -254,16 +276,16 @@ module.exports = {
         });
     },
 
-    uploadImage: function(req, res, cb) {
-        var data = actionUtil.parseValues(req);
-        var savePath = path.resolve(sails.config.odin.uploadFolder + '/categories');
-        var uploadFile = req.file('uploadImage').on('error', function(err) {});
+    uploadImage: (req, res, cb) => {
+        let data = actionUtil.parseValues(req);
+        let savePath = path.resolve(sails.config.odin.uploadFolder + '/categories');
+        let uploadFile = req.file('uploadImage').on('error', (err) => {});
         if (!uploadFile.isNoop) {
             data.fileName = slug(data.name, {lower: true});
 
             uploadFile.upload({
-                saveAs: function(file, cb) {
-                    var mimetype = mime.lookup(file.filename.split('.').pop());
+                saveAs: (file, cb) => {
+                    let mimetype = mime.lookup(file.filename.split('.').pop());
 
                     if (mimetype !== 'image/svg+xml') {
                         return res.negotiate({status: 415, code: 415, message: 'filetype not allowed'});
@@ -290,25 +312,25 @@ module.exports = {
         }
     },
 
-    changeMongoAndPhysicalFile: function(data, file, newDataset, cb) {
+    changeMongoAndPhysicalFile: (data, file, newDataset, cb) => {
         // in case the fileName changed, rename the physical file
-        var hasSameName = file.fileName === data.fileName;
-        var isSameDataset = data.dataset === file.dataset.id;
+        let hasSameName = file.fileName === data.fileName;
+        let isSameDataset = data.dataset === file.dataset.id;
 
-        var originalPath = UploadService.getDatasetPath(file.dataset) + "/" + file.fileName;
+        let originalPath = UploadService.getDatasetPath(file.dataset) + "/" + file.fileName;
         if (!isSameDataset) {
             // if the file changed of dataset
             DataStorageService.mongoReplace(file.dataset.id, newDataset.id, file.fileName, data.fileName, (err) => {
                 if (err)
                     return cb(err)
             });
-            var newPath = UploadService.getDatasetPath(newDataset) + "/" + data.fileName;
+            let newPath = UploadService.getDatasetPath(newDataset) + "/" + data.fileName;
             UploadService.changeFileName(originalPath, newPath);
             return cb(null, data);
         }
         if (!hasSameName) {
             DataStorageService.mongoRename(file.dataset.id, file.fileName, data.fileName, (err) => cb(err));
-            var newPath = UploadService.getDatasetPath(file.dataset) + "/" + data.fileName;
+            let newPath = UploadService.getDatasetPath(file.dataset) + "/" + data.fileName;
             UploadService.changeFileName(originalPath, newPath);
             return cb(null, data);
         }
@@ -317,16 +339,16 @@ module.exports = {
 
     uploadServiceFile: (file, json, callback) => {
         //TODO: Double check if we need https://www.npmjs.com/package/jsonfile
-        var extension = 'json';
+        let extension = 'json';
         file.fileName = slug(file.name, {lower: true});
         file.fileName += '.' + extension;
-        var upath = UploadService.getFilePath(file.dataset, file);
-        fs.lstat(upath, function(err, stats) {
+        let upath = UploadService.getFilePath(file.dataset, file);
+        fs.lstat(upath, (err, stats) => {
             if (!err && stats.isFile()) {
                 UploadService.deleteFile(file.dataset, file.fileName, {});
             }
 
-            jsonfile.writeFile(upath, json, function(err) {
+            jsonfile.writeFile(upath, json, (err) => {
                 if (err)
                     return callback(err, null);
 
@@ -342,19 +364,19 @@ module.exports = {
         });
     },
 
-    getDatasetPath: function(dataset) {
+    getDatasetPath: (dataset) => {
         dataset = _.isObject(dataset)
             ? dataset.name
             : dataset
         return path.resolve(sails.config.odin.uploadFolder + '/' + slug(dataset, {lower: true}));
     },
 
-    getFilePath: function(dataset, file) {
+    getFilePath: (dataset, file) => {
         return UploadService.getDatasetPath(dataset) + '/' + file.fileName;
     },
 
     // TODO: To be removed
-    metadataSave: function(model, data, modelName, req, res, extraRecordsResponse) {
+    metadataSave: (model, data, modelName, req, res, extraRecordsResponse) => {
         model.create(data).exec(function created(err, newInstance) {
             if (err) {
                 return res.negotiate(err);
@@ -374,23 +396,23 @@ module.exports = {
                 }
 
                 // Make sure data is JSON-serializable before publishing
-                var publishData = _.isArray(newInstance)
-                    ? _.map(newInstance, function(instance) {
+                let publishData = _.isArray(newInstance)
+                    ? _.map(newInstance, (instance) => {
                         return instance.toJSON();
                     })
                     : newInstance.toJSON();
                 Model.publishCreate(publishData, !req.options.mirror && req);
             }
 
-            var associations = [];
+            let associations = [];
 
-            _.forEach(model.definition, function(value, key) {
+            _.forEach(model.definition, (value, key) => {
                 if (value.foreignKey) {
                     associations.push(key);
                 }
             });
 
-            model.find(newInstance.id).populate(associations).exec(function(err, record) {
+            model.find(newInstance.id).populate(associations).exec((err, record) => {
                 if (!_.isUndefined(extraRecordsResponse)) {
                     record[0] = _.merge(record[0], extraRecordsResponse);
                 }
@@ -414,7 +436,7 @@ module.exports = {
     },
 
     // TODO: To be removed
-    metadataUpdate: function(model, data, modelName, req, res, extraRecordsResponse) {
+    metadataUpdate: (model, data, modelName, req, res, extraRecordsResponse) => {
         // Look up the model
         model.update(data.id, data).exec(function updated(err, records) {
 
@@ -432,7 +454,7 @@ module.exports = {
                 req._sails.log.warn(util.format('Unexpected output from `%s.update`.', Model.globalId));
             }
 
-            var updatedRecord = records[0];
+            let updatedRecord = records[0];
 
             // If we have the pubsub hook, use the Model's publish method
             // to notify all subscribers about the update.
@@ -452,15 +474,15 @@ module.exports = {
                 resource: updatedRecord.id
             });
 
-            var associations = [];
+            let associations = [];
 
-            _.forEach(model.definition, function(value, key) {
+            _.forEach(model.definition, (value, key) => {
                 if (value.foreignKey) {
                     associations.push(key);
                 }
             });
             //populate the response
-            model.find(updatedRecord.id).populate(associations).exec(function(err, record) {
+            model.find(updatedRecord.id).populate(associations).exec((err, record) => {
                 if (err) {
                     return res.negotiate(err);
                 }
@@ -487,32 +509,32 @@ module.exports = {
 
     },
 
-    deleteFile: function(dataset, fileName, cb) {
+    deleteFile: (dataset, fileName, cb) => {
         Promise.try(() => {
             if (_.isString(dataset)) {
                 return Dataset.findOne(dataset).then((dataset) => dataset)
             }
             return dataset
         }).then((dataset) => {
-            var path = sails.config.odin.uploadFolder + '/' + slug(dataset.name, {lower: true}) + '/' + fileName;
+            let path = sails.config.odin.uploadFolder + '/' + slug(dataset.name, {lower: true}) + '/' + fileName;
 
-            fs.unlink(path, function() {
+            fs.unlink(path, ()=> {
                 DataStorageService.deleteCollection(dataset.id, fileName, (err) => cb(err));
                 ZipService.createZip(dataset.id);
             });
         })
     },
 
-    deleteImage: function(fileName) {
-        var categoryPath = path.resolve(sails.config.odin.uploadFolder + '/categories/' + fileName);
-        fs.unlink(categoryPath, function(err) {
+    deleteImage: (fileName) => {
+        let categoryPath = path.resolve(sails.config.odin.uploadFolder + '/categories/' + fileName);
+        fs.unlink(categoryPath, (err) => {
             console.log(err)
             console.log('Category image deleted');
         })
     },
 
-    changeFileName: function(originalPath, newPath) {
-        fs.rename(originalPath, newPath, function(err) {
+    changeFileName: (originalPath, newPath) => {
+        fs.rename(originalPath, newPath, (err) => {
             if (err)
                 throw err;
             console.log('File renamed');

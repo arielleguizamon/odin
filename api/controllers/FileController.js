@@ -14,31 +14,33 @@ const json2csv = require('json2csv');
 const json2xls = require('json2xls');
 const _ = require('lodash');
 const ipaddr = require('ipaddr.js');
-var SkipperDisk = require('skipper-disk');
+let SkipperDisk = require('skipper-disk');
 
 module.exports = {
     // publish: function(req, res) {
     //     const pk = actionUtil.requirePk(req);
     //     return PublishService.publishModel(File, pk, 'publishedStatus', res)
     // },
-    unpublish: function(req, res) {
+    unpublish: (req, res) => {
         const pk = actionUtil.requirePk(req);
         return PublishService.publishModel(File, pk, 'unpublished', res)
     },
-    reject: function(req, res) {
+    reject: (req, res) => {
         const pk = actionUtil.requirePk(req);
         return PublishService.publishModel(File, pk, 'rejected', res)
     },
-    create: function(req, res) {
-        UploadService.createFile(req, true, function(err, data) {
-            if (err)
+    create (req, res)  {
+        UploadService.createFile(req, true, function (err, data) {
+            if (err){
                 return res.negotiate(err)
+            }
             UploadService.metadataSave(File, data, 'file', req, res);
+            console.log(this)
             this.updateLayout(data);
         }.bind(this));
     },
-    update: function(req, res) {
-        UploadService.createFile(req, false, function(err, data) {
+    update: function (req, res) {
+        UploadService.createFile(req, false, function (err, data) {
             if (err)
                 return res.negotiate(err)
             UploadService.metadataUpdate(File, data, 'file', req, res);
@@ -46,23 +48,23 @@ module.exports = {
             this.updateLayout(data);
         }.bind(this));
     },
-    download: function(req, res) {
-        var identifier = req.param('identifier');
+    download: (req, res) => {
+        let identifier = req.param('identifier');
 
-        var findCriteria = shortid.isValid(identifier)
+        let findCriteria = shortid.isValid(identifier)
             ? identifier
             : {
                 fileName: identifier
             }
-        File.findOne(findCriteria).populate('dataset').then(function(file) {
+        File.findOne(findCriteria).populate('dataset').then((file) => {
             if (!file)
                 return res.notFound();
 
-            var dirname = sails.config.odin.uploadFolder + "/" + slug(file.dataset.name, {lower: true}) + '/' + file.fileName;
+            let dirname = sails.config.odin.uploadFolder + "/" + slug(file.dataset.name, {lower: true}) + '/' + file.fileName;
 
-            var fileAdapter = SkipperDisk();
+            let fileAdapter = SkipperDisk();
 
-            var extension = file.fileName.split('.').pop();
+            let extension = file.fileName.split('.').pop();
             res.set('Content-Type', mime.lookup(extension));
             res.set('Content-Disposition', 'attachment; filename=' + file.fileName);
 
@@ -71,27 +73,27 @@ module.exports = {
                 resource: file.id
             });
 
-            var datasetEndpoint = '/datasets/' + file.dataset.id + '/download'
+            let datasetEndpoint = '/datasets/' + file.dataset.id + '/download'
 
-            var ip = req.headers['x-forwarded-for']
+            let ip = req.headers['x-forwarded-for']
                 ? req.headers['x-forwarded-for']
                 : req.connection.remoteAddress
             ip = _.indexOf(ip, ',') !== -1
                 ? ip.split(',')[0]
                 : ip;
 
-            var addr = ipaddr.process(ip);
-            Statistic.create({method: 'GET', resource: 'Dataset', endpoint: datasetEndpoint, ip: addr.toString(), useragent: req.headers['user-agent']}).exec(function(err, statistic) {
+            let addr = ipaddr.process(ip);
+            Statistic.create({method: 'GET', resource: 'Dataset', endpoint: datasetEndpoint, ip: addr.toString(), useragent: req.headers['user-agent']}).exec((err, statistic) => {
                 console.log('dataset statistic created')
             });
 
             Metric.updateOrCreateMetric(file.dataset.id)
 
-            fileAdapter.read(dirname).on('error', function(err) {
+            fileAdapter.read(dirname).on('error', (err) => {
                 console.dir(err);
                 return res.serverError(err);
             }).pipe(res);
-        }).fail(function(err) {
+        }).fail((err) => {
             if (err)
                 console.error(err);
 
@@ -99,31 +101,31 @@ module.exports = {
         });
     },
 
-    view: function(req, res) {
-        var identifier = req.param('identifier');
+    view: (req, res) => {
+        let identifier = req.param('identifier');
 
-        var findCriteria = shortid.isValid(identifier)
+        let findCriteria = shortid.isValid(identifier)
             ? identifier
             : {
                 fileName: identifier
             }
-        File.findOne(findCriteria).populate('dataset').then(function(file) {
+        File.findOne(findCriteria).populate('dataset').then((file) => {
             if (!file)
                 return res.notFound();
 
-            var dirname = sails.config.odin.uploadFolder + "/" + slug(file.dataset.name, {lower: true}) + '/' + file.fileName;
+            let dirname = sails.config.odin.uploadFolder + "/" + slug(file.dataset.name, {lower: true}) + '/' + file.fileName;
 
-            var fileAdapter = SkipperDisk();
+            let fileAdapter = SkipperDisk();
 
-            var extension = file.fileName.split('.').pop();
+            let extension = file.fileName.split('.').pop();
             res.set('Content-Type', mime.lookup(extension));
             res.set('Content-Disposition', 'inline; filename=' + file.fileName);
 
-            fileAdapter.read(dirname).on('error', function(err) {
+            fileAdapter.read(dirname).on('error', (err) => {
                 console.dir(err);
                 return res.serverError(err);
             }).pipe(res);
-        }).fail(function(err) {
+        }).fail((err) => {
             if (err)
                 console.error(err);
 
@@ -131,19 +133,19 @@ module.exports = {
         });
     },
 
-    contents: function(req, res) {
+    contents: (req, res) => {
         const pk = actionUtil.requirePk(req);
 
-        File.findOne(pk).then(function(file) {
+        File.findOne(pk).then((file) => {
             if (!file)
                 return res.notFound();
-            FileType.findOne(file.type).then(function(filetype) {
+            FileType.findOne(file.type).then((filetype) => {
                 if (!filetype)
                     return res.notFound();
                 if (filetype.api) {
 
-                    var builder = new Response.ResponseGET(req, res, true);
-                    builder.contentsQuery(file.dataset, file.fileName, function(err, data) {
+                    let builder = new Response.ResponseGET(req, res, true);
+                    builder.contentsQuery(file.dataset, file.fileName, (err, data) => {
                         if (err)
                             return res.negotiate(err)
                         return res.ok(data, {
@@ -157,28 +159,28 @@ module.exports = {
             });
         });
     },
-    formattedDownload: function(req, res) {
-        var identifier = req.param('identifier');
+    formattedDownload: (req, res) => {
+        let identifier = req.param('identifier');
         const values = actionUtil.parseValues(req);
 
-        var findCriteria = shortid.isValid(identifier)
+        let findCriteria = shortid.isValid(identifier)
             ? identifier
             : {
                 fileName: identifier
             };
 
         // find the fileid within the parameters
-        var format = _.get(values, 'format', '');
+        let format = _.get(values, 'format', '');
         format = mime.lookup(format);
-        var extension = mime.extension(format);
+        let extension = mime.extension(format);
 
         // available downlaod formats are: csv,xls,xlsx
-        var availableFormats = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+        let availableFormats = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
 
         if (availableFormats.indexOf(format) === -1) {
             return res.badRequest();
         } else {
-            File.findOne(findCriteria).populate(['type', 'dataset']).exec(function(err, file) {
+            File.findOne(findCriteria).populate(['type', 'dataset']).exec(function (err, file){
                 if (err)
                     return res.negotiate(err);
                 if (file.type.mimetype.indexOf(format) !== -1) {
@@ -187,11 +189,11 @@ module.exports = {
                 if (!file.type.api) {
                     return res.badRequest();
                 }
-                var result;
-                DataStorageService.mongoContents(file.dataset.id, file.fileName, 0, 0, function(err, data) {
+                let result;
+                DataStorageService.mongoContents(file.dataset.id, file.fileName, 0, 0, (err, data) => {
                     if (err)
                         return res.negotiate(err)
-                    _.forEach(data, function(elem) {
+                    _.forEach(data, (elem) => {
                         delete elem._id
                     });
 
@@ -200,7 +202,7 @@ module.exports = {
                         resource: file.id
                     });
 
-                    var slugifiedName = slug(file.name, {lower: true})
+                    let slugifiedName = slug(file.name, {lower: true})
 
                     if (format === 'text/csv') {
                         result = json2csv({data: data});
@@ -220,13 +222,13 @@ module.exports = {
         }
 
     },
-    resources: function(req, res) {
-        var resources = {};
+    resources (req, res) {
+        let resources = {};
 
-        this.findResource('map', req, res).then(function(maps) {
+        this.findResource('map', req, res).then( function (maps) {
             if (!_.isEmpty(maps))
                 resources['maps'] = maps;
-            this.findResource('chart', req, res).then(function(charts) {
+            this.findResource('chart', req, res).then((charts) => {
                 if (!_.isEmpty(charts))
                     resources['charts'] = charts;
                 return res.ok(resources);
@@ -239,10 +241,10 @@ module.exports = {
         req.params.where = {
             file: pk
         };
-        var builder = new Response.ResponseGET(req, res, true);
+        let builder = new Response.ResponseGET(req, res, true);
         return builder.findQuery();
     },
-    updateLayout: function(data) {
+    updateLayout: (data) => {
         // if the file has the property layout on true,
         // find on the dataset if previous file with that property existed and set it to false
         if (data.layout === true) {
@@ -252,7 +254,7 @@ module.exports = {
                 },
                 dataset: data.dataset,
                 layout: true
-            }, {layout: false}).then(function(file) {
+            }, {layout: false}).then((file) => {
                 console.log('layout updated');
             })
         }

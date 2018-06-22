@@ -33,7 +33,6 @@ module.exports = {
         },
         category: {
             type: 'string',
-            required: true,
             enum: ['site', 'visualizations', 'integrations']
         },
         parent: {
