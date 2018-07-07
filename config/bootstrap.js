@@ -13,7 +13,7 @@ const exec = require('child_process').exec;
 const moment = require('moment');
 // const CronJob = require('cron').CronJob;
 const CategorySeed = require('../seeds/CategorySeed');
-const dataJsonS = require('../api/services/DataJsonService.js');
+const DataJsonService = require('../api/services/DataJsonService.js');
 
 module.exports = {
     bootstrap: cb => {
@@ -78,12 +78,14 @@ module.exports = {
         // data.json dataJsonConstructor
           try {
             let path = 'files/dataJson';
-            if (!(fs.existsSync(path))) {
-              mkdirp(path, (err) => {
+        // check if the fiile exist
+            if (!(fs.existsSync(path)) || !(fs.existsSync(`${path}/dataJson.json`))) {
+                mkdirp(path, (err) => {
                   if (err) console.error(err);
                   else console.log('dataJson folder created on: ' + path)
-              });
-                dataJsonS.dataJsonConstructor();
+                });
+                // create file
+                DataJsonService.dataJsonConstructor();
               }
           } catch (e) {
             console.log(e);
