@@ -10,10 +10,10 @@ module.exports = {
     updateJson : async (values, modelType) => {
       // This service will receive CRUD ops in Datasets, Categories or Files and then will
       // overwrite the JSON specified
-      if (arguments.length === 0 || values.wasCreated) {
-        return false
-      }
-
+//      if (arguments.length === 0 || values.wasCreated) {
+//        return false
+//      }
+/*
       const idDataset = values.dataset || false
 
       let id = ""
@@ -51,7 +51,7 @@ module.exports = {
           })
       } catch (err) {
           throw err
-      }
+      }*/
       return
     },
 

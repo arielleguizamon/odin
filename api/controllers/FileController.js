@@ -159,7 +159,7 @@ module.exports = {
             });
         });
     },
-    formattedDownload: (req, res) => {
+    formattedDownload: function (req, res) {
         let identifier = req.param('identifier');
         const values = actionUtil.parseValues(req);
 
